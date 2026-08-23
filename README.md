@@ -23,3 +23,4 @@ To enable real Google Sign-In:
 1. Start Backend: `cd backend && .\venv\Scripts\python -m uvicorn main:app --host 0.0.0.0 --port 8000`
 2. Start Frontend: `cd frontend && npm run dev`
 3. Access: `http://localhost:5173`
+4. video link https://screenapp.io/app/v/HN1_0CY5V8
