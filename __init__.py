@@ -1,456 +1,283 @@
-from importlib import import_module
-from typing import TYPE_CHECKING
-from warnings import warn
+# __init__.py
+# Copyright (C) 2005-2026 the SQLAlchemy authors and contributors
+# <see AUTHORS file>
+#
+# This module is part of SQLAlchemy and is released under
+# the MIT License: https://www.opensource.org/licenses/mit-license.php
 
-from ._migration import getattr_migration
-from .version import VERSION, _ensure_pydantic_core_version
+from __future__ import annotations
 
-_ensure_pydantic_core_version()
-del _ensure_pydantic_core_version
+from typing import Any
 
-if TYPE_CHECKING:
-    # import of virtually everything is supported via `__getattr__` below,
-    # but we need them here for type checking and IDE support
-    import pydantic_core
-    from pydantic_core.core_schema import (
-        FieldSerializationInfo,
-        SerializationInfo,
-        SerializerFunctionWrapHandler,
-        ValidationInfo,
-        ValidatorFunctionWrapHandler,
-    )
-
-    from . import dataclasses
-    from .aliases import AliasChoices, AliasGenerator, AliasPath
-    from .annotated_handlers import GetCoreSchemaHandler, GetJsonSchemaHandler
-    from .config import ConfigDict, with_config
-    from .errors import *
-    from .fields import Field, PrivateAttr, computed_field
-    from .functional_serializers import (
-        PlainSerializer,
-        SerializeAsAny,
-        WrapSerializer,
-        field_serializer,
-        model_serializer,
-    )
-    from .functional_validators import (
-        AfterValidator,
-        BeforeValidator,
-        InstanceOf,
-        ModelWrapValidatorHandler,
-        PlainValidator,
-        SkipValidation,
-        ValidateAs,
-        WrapValidator,
-        field_validator,
-        model_validator,
-    )
-    from .json_schema import WithJsonSchema
-    from .main import *
-    from .networks import *
-    from .type_adapter import TypeAdapter
-    from .types import *
-    from .validate_call_decorator import validate_call
-    from .warnings import (
-        PydanticDeprecatedSince20,
-        PydanticDeprecatedSince26,
-        PydanticDeprecatedSince29,
-        PydanticDeprecatedSince210,
-        PydanticDeprecatedSince211,
-        PydanticDeprecatedSince212,
-        PydanticDeprecationWarning,
-        PydanticExperimentalWarning,
-    )
-
-    # this encourages pycharm to import `ValidationError` from here, not pydantic_core
-    ValidationError = pydantic_core.ValidationError
-    from .deprecated.class_validators import root_validator, validator
-    from .deprecated.config import BaseConfig, Extra
-    from .deprecated.tools import *
-    from .root_model import RootModel
-
-__version__ = VERSION
-__all__ = (
-    # dataclasses
-    'dataclasses',
-    # functional validators
-    'field_validator',
-    'model_validator',
-    'AfterValidator',
-    'BeforeValidator',
-    'PlainValidator',
-    'WrapValidator',
-    'SkipValidation',
-    'ValidateAs',
-    'InstanceOf',
-    'ModelWrapValidatorHandler',
-    # JSON Schema
-    'WithJsonSchema',
-    # deprecated V1 functional validators, these are imported via `__getattr__` below
-    'root_validator',
-    'validator',
-    # functional serializers
-    'field_serializer',
-    'model_serializer',
-    'PlainSerializer',
-    'SerializeAsAny',
-    'WrapSerializer',
-    # config
-    'ConfigDict',
-    'with_config',
-    # deprecated V1 config, these are imported via `__getattr__` below
-    'BaseConfig',
-    'Extra',
-    # validate_call
-    'validate_call',
-    # errors
-    'PydanticErrorCodes',
-    'PydanticUserError',
-    'PydanticSchemaGenerationError',
-    'PydanticImportError',
-    'PydanticUndefinedAnnotation',
-    'PydanticInvalidForJsonSchema',
-    'PydanticForbiddenQualifier',
-    # fields
-    'Field',
-    'computed_field',
-    'PrivateAttr',
-    # alias
-    'AliasChoices',
-    'AliasGenerator',
-    'AliasPath',
-    # main
-    'BaseModel',
-    'create_model',
-    # network
-    'AnyUrl',
-    'AnyHttpUrl',
-    'FileUrl',
-    'HttpUrl',
-    'FtpUrl',
-    'WebsocketUrl',
-    'AnyWebsocketUrl',
-    'UrlConstraints',
-    'EmailStr',
-    'NameEmail',
-    'IPvAnyAddress',
-    'IPvAnyInterface',
-    'IPvAnyNetwork',
-    'PostgresDsn',
-    'CockroachDsn',
-    'AmqpDsn',
-    'RedisDsn',
-    'MongoDsn',
-    'KafkaDsn',
-    'NatsDsn',
-    'MySQLDsn',
-    'MariaDBDsn',
-    'ClickHouseDsn',
-    'SnowflakeDsn',
-    'validate_email',
-    # root_model
-    'RootModel',
-    # deprecated tools, these are imported via `__getattr__` below
-    'parse_obj_as',
-    'schema_of',
-    'schema_json_of',
-    # types
-    'Strict',
-    'StrictStr',
-    'conbytes',
-    'conlist',
-    'conset',
-    'confrozenset',
-    'constr',
-    'StringConstraints',
-    'ImportString',
-    'conint',
-    'PositiveInt',
-    'NegativeInt',
-    'NonNegativeInt',
-    'NonPositiveInt',
-    'confloat',
-    'PositiveFloat',
-    'NegativeFloat',
-    'NonNegativeFloat',
-    'NonPositiveFloat',
-    'FiniteFloat',
-    'condecimal',
-    'condate',
-    'UUID1',
-    'UUID3',
-    'UUID4',
-    'UUID5',
-    'UUID6',
-    'UUID7',
-    'UUID8',
-    'FilePath',
-    'DirectoryPath',
-    'NewPath',
-    'Json',
-    'Secret',
-    'SecretStr',
-    'SecretBytes',
-    'SocketPath',
-    'StrictBool',
-    'StrictBytes',
-    'StrictInt',
-    'StrictFloat',
-    'PaymentCardNumber',
-    'ByteSize',
-    'PastDate',
-    'FutureDate',
-    'PastDatetime',
-    'FutureDatetime',
-    'AwareDatetime',
-    'NaiveDatetime',
-    'AllowInfNan',
-    'EncoderProtocol',
-    'EncodedBytes',
-    'EncodedStr',
-    'Base64Encoder',
-    'Base64Bytes',
-    'Base64Str',
-    'Base64UrlBytes',
-    'Base64UrlStr',
-    'GetPydanticSchema',
-    'Tag',
-    'Discriminator',
-    'JsonValue',
-    'FailFast',
-    # type_adapter
-    'TypeAdapter',
-    # version
-    '__version__',
-    'VERSION',
-    # warnings
-    'PydanticDeprecatedSince20',
-    'PydanticDeprecatedSince26',
-    'PydanticDeprecatedSince29',
-    'PydanticDeprecatedSince210',
-    'PydanticDeprecatedSince211',
-    'PydanticDeprecatedSince212',
-    'PydanticDeprecationWarning',
-    'PydanticExperimentalWarning',
-    # annotated handlers
-    'GetCoreSchemaHandler',
-    'GetJsonSchemaHandler',
-    # pydantic_core
-    'ValidationError',
-    'ValidationInfo',
-    'SerializationInfo',
-    'ValidatorFunctionWrapHandler',
-    'FieldSerializationInfo',
-    'SerializerFunctionWrapHandler',
-    'OnErrorOmit',
+from . import util as _util
+from .engine import AdaptedConnection as AdaptedConnection
+from .engine import BaseRow as BaseRow
+from .engine import BindTyping as BindTyping
+from .engine import ChunkedIteratorResult as ChunkedIteratorResult
+from .engine import Compiled as Compiled
+from .engine import Connection as Connection
+from .engine import create_engine as create_engine
+from .engine import create_mock_engine as create_mock_engine
+from .engine import create_pool_from_url as create_pool_from_url
+from .engine import CreateEnginePlugin as CreateEnginePlugin
+from .engine import CursorResult as CursorResult
+from .engine import Dialect as Dialect
+from .engine import Engine as Engine
+from .engine import engine_from_config as engine_from_config
+from .engine import ExceptionContext as ExceptionContext
+from .engine import ExecutionContext as ExecutionContext
+from .engine import FrozenResult as FrozenResult
+from .engine import Inspector as Inspector
+from .engine import IteratorResult as IteratorResult
+from .engine import make_url as make_url
+from .engine import MappingResult as MappingResult
+from .engine import MergedResult as MergedResult
+from .engine import NestedTransaction as NestedTransaction
+from .engine import Result as Result
+from .engine import result_tuple as result_tuple
+from .engine import ResultProxy as ResultProxy
+from .engine import RootTransaction as RootTransaction
+from .engine import Row as Row
+from .engine import RowMapping as RowMapping
+from .engine import ScalarResult as ScalarResult
+from .engine import Transaction as Transaction
+from .engine import TwoPhaseTransaction as TwoPhaseTransaction
+from .engine import TypeCompiler as TypeCompiler
+from .engine import URL as URL
+from .inspection import inspect as inspect
+from .pool import AssertionPool as AssertionPool
+from .pool import AsyncAdaptedQueuePool as AsyncAdaptedQueuePool
+from .pool import (
+    FallbackAsyncAdaptedQueuePool as FallbackAsyncAdaptedQueuePool,
 )
+from .pool import NullPool as NullPool
+from .pool import Pool as Pool
+from .pool import PoolProxiedConnection as PoolProxiedConnection
+from .pool import PoolResetState as PoolResetState
+from .pool import QueuePool as QueuePool
+from .pool import SingletonThreadPool as SingletonThreadPool
+from .pool import StaticPool as StaticPool
+from .schema import BaseDDLElement as BaseDDLElement
+from .schema import BLANK_SCHEMA as BLANK_SCHEMA
+from .schema import CheckConstraint as CheckConstraint
+from .schema import Column as Column
+from .schema import ColumnDefault as ColumnDefault
+from .schema import Computed as Computed
+from .schema import Constraint as Constraint
+from .schema import DDL as DDL
+from .schema import DDLElement as DDLElement
+from .schema import DefaultClause as DefaultClause
+from .schema import ExecutableDDLElement as ExecutableDDLElement
+from .schema import FetchedValue as FetchedValue
+from .schema import ForeignKey as ForeignKey
+from .schema import ForeignKeyConstraint as ForeignKeyConstraint
+from .schema import Identity as Identity
+from .schema import Index as Index
+from .schema import insert_sentinel as insert_sentinel
+from .schema import MetaData as MetaData
+from .schema import PrimaryKeyConstraint as PrimaryKeyConstraint
+from .schema import Sequence as Sequence
+from .schema import Table as Table
+from .schema import UniqueConstraint as UniqueConstraint
+from .sql import ColumnExpressionArgument as ColumnExpressionArgument
+from .sql import NotNullable as NotNullable
+from .sql import Nullable as Nullable
+from .sql import SelectLabelStyle as SelectLabelStyle
+from .sql.expression import Alias as Alias
+from .sql.expression import alias as alias
+from .sql.expression import AliasedReturnsRows as AliasedReturnsRows
+from .sql.expression import all_ as all_
+from .sql.expression import and_ as and_
+from .sql.expression import any_ as any_
+from .sql.expression import asc as asc
+from .sql.expression import between as between
+from .sql.expression import BinaryExpression as BinaryExpression
+from .sql.expression import bindparam as bindparam
+from .sql.expression import BindParameter as BindParameter
+from .sql.expression import bitwise_not as bitwise_not
+from .sql.expression import BooleanClauseList as BooleanClauseList
+from .sql.expression import CacheKey as CacheKey
+from .sql.expression import Case as Case
+from .sql.expression import case as case
+from .sql.expression import Cast as Cast
+from .sql.expression import cast as cast
+from .sql.expression import ClauseElement as ClauseElement
+from .sql.expression import ClauseList as ClauseList
+from .sql.expression import collate as collate
+from .sql.expression import CollectionAggregate as CollectionAggregate
+from .sql.expression import column as column
+from .sql.expression import ColumnClause as ColumnClause
+from .sql.expression import ColumnCollection as ColumnCollection
+from .sql.expression import ColumnElement as ColumnElement
+from .sql.expression import ColumnOperators as ColumnOperators
+from .sql.expression import CompoundSelect as CompoundSelect
+from .sql.expression import CTE as CTE
+from .sql.expression import cte as cte
+from .sql.expression import custom_op as custom_op
+from .sql.expression import Delete as Delete
+from .sql.expression import delete as delete
+from .sql.expression import desc as desc
+from .sql.expression import distinct as distinct
+from .sql.expression import except_ as except_
+from .sql.expression import except_all as except_all
+from .sql.expression import Executable as Executable
+from .sql.expression import Exists as Exists
+from .sql.expression import exists as exists
+from .sql.expression import Extract as Extract
+from .sql.expression import extract as extract
+from .sql.expression import false as false
+from .sql.expression import False_ as False_
+from .sql.expression import FromClause as FromClause
+from .sql.expression import FromGrouping as FromGrouping
+from .sql.expression import func as func
+from .sql.expression import funcfilter as funcfilter
+from .sql.expression import Function as Function
+from .sql.expression import FunctionElement as FunctionElement
+from .sql.expression import FunctionFilter as FunctionFilter
+from .sql.expression import GenerativeSelect as GenerativeSelect
+from .sql.expression import Grouping as Grouping
+from .sql.expression import HasCTE as HasCTE
+from .sql.expression import HasPrefixes as HasPrefixes
+from .sql.expression import HasSuffixes as HasSuffixes
+from .sql.expression import Insert as Insert
+from .sql.expression import insert as insert
+from .sql.expression import intersect as intersect
+from .sql.expression import intersect_all as intersect_all
+from .sql.expression import Join as Join
+from .sql.expression import join as join
+from .sql.expression import Label as Label
+from .sql.expression import label as label
+from .sql.expression import LABEL_STYLE_DEFAULT as LABEL_STYLE_DEFAULT
+from .sql.expression import (
+    LABEL_STYLE_DISAMBIGUATE_ONLY as LABEL_STYLE_DISAMBIGUATE_ONLY,
+)
+from .sql.expression import LABEL_STYLE_NONE as LABEL_STYLE_NONE
+from .sql.expression import (
+    LABEL_STYLE_TABLENAME_PLUS_COL as LABEL_STYLE_TABLENAME_PLUS_COL,
+)
+from .sql.expression import lambda_stmt as lambda_stmt
+from .sql.expression import LambdaElement as LambdaElement
+from .sql.expression import Lateral as Lateral
+from .sql.expression import lateral as lateral
+from .sql.expression import literal as literal
+from .sql.expression import literal_column as literal_column
+from .sql.expression import modifier as modifier
+from .sql.expression import not_ as not_
+from .sql.expression import Null as Null
+from .sql.expression import null as null
+from .sql.expression import nulls_first as nulls_first
+from .sql.expression import nulls_last as nulls_last
+from .sql.expression import nullsfirst as nullsfirst
+from .sql.expression import nullslast as nullslast
+from .sql.expression import Operators as Operators
+from .sql.expression import or_ as or_
+from .sql.expression import outerjoin as outerjoin
+from .sql.expression import outparam as outparam
+from .sql.expression import Over as Over
+from .sql.expression import over as over
+from .sql.expression import quoted_name as quoted_name
+from .sql.expression import ReleaseSavepointClause as ReleaseSavepointClause
+from .sql.expression import ReturnsRows as ReturnsRows
+from .sql.expression import (
+    RollbackToSavepointClause as RollbackToSavepointClause,
+)
+from .sql.expression import SavepointClause as SavepointClause
+from .sql.expression import ScalarSelect as ScalarSelect
+from .sql.expression import Select as Select
+from .sql.expression import select as select
+from .sql.expression import Selectable as Selectable
+from .sql.expression import SelectBase as SelectBase
+from .sql.expression import SQLColumnExpression as SQLColumnExpression
+from .sql.expression import StatementLambdaElement as StatementLambdaElement
+from .sql.expression import Subquery as Subquery
+from .sql.expression import table as table
+from .sql.expression import TableClause as TableClause
+from .sql.expression import TableSample as TableSample
+from .sql.expression import tablesample as tablesample
+from .sql.expression import TableValuedAlias as TableValuedAlias
+from .sql.expression import text as text
+from .sql.expression import TextAsFrom as TextAsFrom
+from .sql.expression import TextClause as TextClause
+from .sql.expression import TextualSelect as TextualSelect
+from .sql.expression import true as true
+from .sql.expression import True_ as True_
+from .sql.expression import try_cast as try_cast
+from .sql.expression import TryCast as TryCast
+from .sql.expression import Tuple as Tuple
+from .sql.expression import tuple_ as tuple_
+from .sql.expression import type_coerce as type_coerce
+from .sql.expression import TypeClause as TypeClause
+from .sql.expression import TypeCoerce as TypeCoerce
+from .sql.expression import UnaryExpression as UnaryExpression
+from .sql.expression import union as union
+from .sql.expression import union_all as union_all
+from .sql.expression import Update as Update
+from .sql.expression import update as update
+from .sql.expression import UpdateBase as UpdateBase
+from .sql.expression import Values as Values
+from .sql.expression import values as values
+from .sql.expression import ValuesBase as ValuesBase
+from .sql.expression import Visitable as Visitable
+from .sql.expression import within_group as within_group
+from .sql.expression import WithinGroup as WithinGroup
+from .types import ARRAY as ARRAY
+from .types import BIGINT as BIGINT
+from .types import BigInteger as BigInteger
+from .types import BINARY as BINARY
+from .types import BLOB as BLOB
+from .types import BOOLEAN as BOOLEAN
+from .types import Boolean as Boolean
+from .types import CHAR as CHAR
+from .types import CLOB as CLOB
+from .types import DATE as DATE
+from .types import Date as Date
+from .types import DATETIME as DATETIME
+from .types import DateTime as DateTime
+from .types import DECIMAL as DECIMAL
+from .types import DOUBLE as DOUBLE
+from .types import Double as Double
+from .types import DOUBLE_PRECISION as DOUBLE_PRECISION
+from .types import Enum as Enum
+from .types import FLOAT as FLOAT
+from .types import Float as Float
+from .types import INT as INT
+from .types import INTEGER as INTEGER
+from .types import Integer as Integer
+from .types import Interval as Interval
+from .types import JSON as JSON
+from .types import LargeBinary as LargeBinary
+from .types import NCHAR as NCHAR
+from .types import NUMERIC as NUMERIC
+from .types import Numeric as Numeric
+from .types import NVARCHAR as NVARCHAR
+from .types import PickleType as PickleType
+from .types import REAL as REAL
+from .types import SMALLINT as SMALLINT
+from .types import SmallInteger as SmallInteger
+from .types import String as String
+from .types import TEXT as TEXT
+from .types import Text as Text
+from .types import TIME as TIME
+from .types import Time as Time
+from .types import TIMESTAMP as TIMESTAMP
+from .types import TupleType as TupleType
+from .types import TypeDecorator as TypeDecorator
+from .types import Unicode as Unicode
+from .types import UnicodeText as UnicodeText
+from .types import UUID as UUID
+from .types import Uuid as Uuid
+from .types import VARBINARY as VARBINARY
+from .types import VARCHAR as VARCHAR
 
-# A mapping of {<member name>: (package, <module name>)} defining dynamic imports
-_dynamic_imports: 'dict[str, tuple[str, str]]' = {
-    'dataclasses': (__spec__.parent, '__module__'),
-    # functional validators
-    'field_validator': (__spec__.parent, '.functional_validators'),
-    'model_validator': (__spec__.parent, '.functional_validators'),
-    'AfterValidator': (__spec__.parent, '.functional_validators'),
-    'BeforeValidator': (__spec__.parent, '.functional_validators'),
-    'PlainValidator': (__spec__.parent, '.functional_validators'),
-    'WrapValidator': (__spec__.parent, '.functional_validators'),
-    'SkipValidation': (__spec__.parent, '.functional_validators'),
-    'InstanceOf': (__spec__.parent, '.functional_validators'),
-    'ValidateAs': (__spec__.parent, '.functional_validators'),
-    'ModelWrapValidatorHandler': (__spec__.parent, '.functional_validators'),
-    # JSON Schema
-    'WithJsonSchema': (__spec__.parent, '.json_schema'),
-    # functional serializers
-    'field_serializer': (__spec__.parent, '.functional_serializers'),
-    'model_serializer': (__spec__.parent, '.functional_serializers'),
-    'PlainSerializer': (__spec__.parent, '.functional_serializers'),
-    'SerializeAsAny': (__spec__.parent, '.functional_serializers'),
-    'WrapSerializer': (__spec__.parent, '.functional_serializers'),
-    # config
-    'ConfigDict': (__spec__.parent, '.config'),
-    'with_config': (__spec__.parent, '.config'),
-    # validate call
-    'validate_call': (__spec__.parent, '.validate_call_decorator'),
-    # errors
-    'PydanticErrorCodes': (__spec__.parent, '.errors'),
-    'PydanticUserError': (__spec__.parent, '.errors'),
-    'PydanticSchemaGenerationError': (__spec__.parent, '.errors'),
-    'PydanticImportError': (__spec__.parent, '.errors'),
-    'PydanticUndefinedAnnotation': (__spec__.parent, '.errors'),
-    'PydanticInvalidForJsonSchema': (__spec__.parent, '.errors'),
-    'PydanticForbiddenQualifier': (__spec__.parent, '.errors'),
-    # fields
-    'Field': (__spec__.parent, '.fields'),
-    'computed_field': (__spec__.parent, '.fields'),
-    'PrivateAttr': (__spec__.parent, '.fields'),
-    # alias
-    'AliasChoices': (__spec__.parent, '.aliases'),
-    'AliasGenerator': (__spec__.parent, '.aliases'),
-    'AliasPath': (__spec__.parent, '.aliases'),
-    # main
-    'BaseModel': (__spec__.parent, '.main'),
-    'create_model': (__spec__.parent, '.main'),
-    # network
-    'AnyUrl': (__spec__.parent, '.networks'),
-    'AnyHttpUrl': (__spec__.parent, '.networks'),
-    'FileUrl': (__spec__.parent, '.networks'),
-    'HttpUrl': (__spec__.parent, '.networks'),
-    'FtpUrl': (__spec__.parent, '.networks'),
-    'WebsocketUrl': (__spec__.parent, '.networks'),
-    'AnyWebsocketUrl': (__spec__.parent, '.networks'),
-    'UrlConstraints': (__spec__.parent, '.networks'),
-    'EmailStr': (__spec__.parent, '.networks'),
-    'NameEmail': (__spec__.parent, '.networks'),
-    'IPvAnyAddress': (__spec__.parent, '.networks'),
-    'IPvAnyInterface': (__spec__.parent, '.networks'),
-    'IPvAnyNetwork': (__spec__.parent, '.networks'),
-    'PostgresDsn': (__spec__.parent, '.networks'),
-    'CockroachDsn': (__spec__.parent, '.networks'),
-    'AmqpDsn': (__spec__.parent, '.networks'),
-    'RedisDsn': (__spec__.parent, '.networks'),
-    'MongoDsn': (__spec__.parent, '.networks'),
-    'KafkaDsn': (__spec__.parent, '.networks'),
-    'NatsDsn': (__spec__.parent, '.networks'),
-    'MySQLDsn': (__spec__.parent, '.networks'),
-    'MariaDBDsn': (__spec__.parent, '.networks'),
-    'ClickHouseDsn': (__spec__.parent, '.networks'),
-    'SnowflakeDsn': (__spec__.parent, '.networks'),
-    'validate_email': (__spec__.parent, '.networks'),
-    # root_model
-    'RootModel': (__spec__.parent, '.root_model'),
-    # types
-    'Strict': (__spec__.parent, '.types'),
-    'StrictStr': (__spec__.parent, '.types'),
-    'conbytes': (__spec__.parent, '.types'),
-    'conlist': (__spec__.parent, '.types'),
-    'conset': (__spec__.parent, '.types'),
-    'confrozenset': (__spec__.parent, '.types'),
-    'constr': (__spec__.parent, '.types'),
-    'StringConstraints': (__spec__.parent, '.types'),
-    'ImportString': (__spec__.parent, '.types'),
-    'conint': (__spec__.parent, '.types'),
-    'PositiveInt': (__spec__.parent, '.types'),
-    'NegativeInt': (__spec__.parent, '.types'),
-    'NonNegativeInt': (__spec__.parent, '.types'),
-    'NonPositiveInt': (__spec__.parent, '.types'),
-    'confloat': (__spec__.parent, '.types'),
-    'PositiveFloat': (__spec__.parent, '.types'),
-    'NegativeFloat': (__spec__.parent, '.types'),
-    'NonNegativeFloat': (__spec__.parent, '.types'),
-    'NonPositiveFloat': (__spec__.parent, '.types'),
-    'FiniteFloat': (__spec__.parent, '.types'),
-    'condecimal': (__spec__.parent, '.types'),
-    'condate': (__spec__.parent, '.types'),
-    'UUID1': (__spec__.parent, '.types'),
-    'UUID3': (__spec__.parent, '.types'),
-    'UUID4': (__spec__.parent, '.types'),
-    'UUID5': (__spec__.parent, '.types'),
-    'UUID6': (__spec__.parent, '.types'),
-    'UUID7': (__spec__.parent, '.types'),
-    'UUID8': (__spec__.parent, '.types'),
-    'FilePath': (__spec__.parent, '.types'),
-    'DirectoryPath': (__spec__.parent, '.types'),
-    'NewPath': (__spec__.parent, '.types'),
-    'Json': (__spec__.parent, '.types'),
-    'Secret': (__spec__.parent, '.types'),
-    'SecretStr': (__spec__.parent, '.types'),
-    'SecretBytes': (__spec__.parent, '.types'),
-    'StrictBool': (__spec__.parent, '.types'),
-    'StrictBytes': (__spec__.parent, '.types'),
-    'StrictInt': (__spec__.parent, '.types'),
-    'StrictFloat': (__spec__.parent, '.types'),
-    'PaymentCardNumber': (__spec__.parent, '.types'),
-    'ByteSize': (__spec__.parent, '.types'),
-    'PastDate': (__spec__.parent, '.types'),
-    'SocketPath': (__spec__.parent, '.types'),
-    'FutureDate': (__spec__.parent, '.types'),
-    'PastDatetime': (__spec__.parent, '.types'),
-    'FutureDatetime': (__spec__.parent, '.types'),
-    'AwareDatetime': (__spec__.parent, '.types'),
-    'NaiveDatetime': (__spec__.parent, '.types'),
-    'AllowInfNan': (__spec__.parent, '.types'),
-    'EncoderProtocol': (__spec__.parent, '.types'),
-    'EncodedBytes': (__spec__.parent, '.types'),
-    'EncodedStr': (__spec__.parent, '.types'),
-    'Base64Encoder': (__spec__.parent, '.types'),
-    'Base64Bytes': (__spec__.parent, '.types'),
-    'Base64Str': (__spec__.parent, '.types'),
-    'Base64UrlBytes': (__spec__.parent, '.types'),
-    'Base64UrlStr': (__spec__.parent, '.types'),
-    'GetPydanticSchema': (__spec__.parent, '.types'),
-    'Tag': (__spec__.parent, '.types'),
-    'Discriminator': (__spec__.parent, '.types'),
-    'JsonValue': (__spec__.parent, '.types'),
-    'OnErrorOmit': (__spec__.parent, '.types'),
-    'FailFast': (__spec__.parent, '.types'),
-    # type_adapter
-    'TypeAdapter': (__spec__.parent, '.type_adapter'),
-    # warnings
-    'PydanticDeprecatedSince20': (__spec__.parent, '.warnings'),
-    'PydanticDeprecatedSince26': (__spec__.parent, '.warnings'),
-    'PydanticDeprecatedSince29': (__spec__.parent, '.warnings'),
-    'PydanticDeprecatedSince210': (__spec__.parent, '.warnings'),
-    'PydanticDeprecatedSince211': (__spec__.parent, '.warnings'),
-    'PydanticDeprecatedSince212': (__spec__.parent, '.warnings'),
-    'PydanticDeprecationWarning': (__spec__.parent, '.warnings'),
-    'PydanticExperimentalWarning': (__spec__.parent, '.warnings'),
-    # annotated handlers
-    'GetCoreSchemaHandler': (__spec__.parent, '.annotated_handlers'),
-    'GetJsonSchemaHandler': (__spec__.parent, '.annotated_handlers'),
-    # pydantic_core stuff
-    'ValidationError': ('pydantic_core', '.'),
-    'ValidationInfo': ('pydantic_core', '.core_schema'),
-    'SerializationInfo': ('pydantic_core', '.core_schema'),
-    'ValidatorFunctionWrapHandler': ('pydantic_core', '.core_schema'),
-    'FieldSerializationInfo': ('pydantic_core', '.core_schema'),
-    'SerializerFunctionWrapHandler': ('pydantic_core', '.core_schema'),
-    # deprecated, mostly not included in __all__
-    'root_validator': (__spec__.parent, '.deprecated.class_validators'),
-    'validator': (__spec__.parent, '.deprecated.class_validators'),
-    'BaseConfig': (__spec__.parent, '.deprecated.config'),
-    'Extra': (__spec__.parent, '.deprecated.config'),
-    'parse_obj_as': (__spec__.parent, '.deprecated.tools'),
-    'schema_of': (__spec__.parent, '.deprecated.tools'),
-    'schema_json_of': (__spec__.parent, '.deprecated.tools'),
-    # deprecated dynamic imports
-    'FieldValidationInfo': ('pydantic_core', '.core_schema'),
-    'GenerateSchema': (__spec__.parent, '._internal._generate_schema'),
-}
-_deprecated_dynamic_imports = {'FieldValidationInfo', 'GenerateSchema'}
-
-_getattr_migration = getattr_migration(__name__)
+__version__ = "2.0.52"
 
 
-def __getattr__(attr_name: str) -> object:
-    if attr_name in _deprecated_dynamic_imports:
-        from pydantic.warnings import PydanticDeprecatedSince20
+def __go(lcls: Any) -> None:
+    _util.preloaded.import_prefix("sqlalchemy")
 
-        warn(
-            f'Importing {attr_name} from `pydantic` is deprecated. This feature is either no longer supported, or is not public.',
-            PydanticDeprecatedSince20,
-            stacklevel=2,
-        )
+    from . import exc
 
-    dynamic_attr = _dynamic_imports.get(attr_name)
-    if dynamic_attr is None:
-        return _getattr_migration(attr_name)
-
-    package, module_name = dynamic_attr
-
-    if module_name == '__module__':
-        result = import_module(f'.{attr_name}', package=package)
-        globals()[attr_name] = result
-        return result
-    else:
-        module = import_module(module_name, package=package)
-        result = getattr(module, attr_name)
-        g = globals()
-        for k, (_, v_module_name) in _dynamic_imports.items():
-            if v_module_name == module_name and k not in _deprecated_dynamic_imports:
-                g[k] = getattr(module, k)
-        return result
+    exc._version_token = "".join(__version__.split(".")[0:2])
 
 
-def __dir__() -> list[str]:
-    return list(__all__)
+__go(locals())
